@@ -1,13 +1,12 @@
-#!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
 import re
 import urllib
 import urlparse
-from pyquery import PyQuery
 import domain
 import os.path
 import unittest
+from pyquery import PyQuery
 
 
 class HtmlAnalyzer(object):
@@ -40,7 +39,8 @@ class HtmlAnalyzer(object):
             if link is None:
                 raise
 
-            # strip('\\"') for href like <a href=\"http://www.sina.com.cn\">Sina</a>
+            # strip('\\"') for href like
+            # <a href=\"http://www.sina.com.cn\">Sina</a>
             link = link.strip("/ ").strip('\\"')
 
             link = urlparse.urljoin(baseurl, link)
@@ -89,16 +89,67 @@ class HtmlAnalyzer(object):
         return allLinks
 
 
+class UrlObject(object):
+
+    # used to get query params
+    query_pat = re.compile(r'(\w+)=\w+')
+
+    def __init__(self, url, normalize_rule):
+        self._url = url
+        self._rule = normalize_rule
+        self._hashcode = self.__hash__()
+
+    def __str__(self):
+        return self._url
+
+    def __repr__(self):
+        return "<Url object: %s>" % self._url
+
+    def __hash__(self):
+        scheme, hostname, dirs, tailpage, querykeys = self._parse(
+            self._url)
+        norm_scheme = self._rule.normalize_scheme(scheme)
+        norm_hostname = self._rule.normalize_hostname(hostname)
+        norm_dirs = self._rule.normalize_dirs(dirs)
+        norm_tailpage = self._rule.normalize_tailpage(tailpage)
+        norm_querykeys = self._rule.normalize_querykeys(querykeys)
+        result = UniqRule.connector.join(
+            [norm_scheme, norm_hostname, norm_dirs,
+                norm_tailpage, norm_querykeys])
+        return hash(result)
+
+    def _parse(self, url):
+        split_result = urlparse.urlsplit(url)
+        scheme = split_result.scheme
+        hostname = split_result.hostname
+        dirs_tailpage = split_result.path.split('/')
+        dirs = []
+        if len(dirs_tailpage) >= 3:   # has dir
+            dirs = dirs_tailpage[1:-1]
+        tailpage = dirs_tailpage[-1]
+        querykeys = UrlObject.query_pat.findall(
+            split_result.query)
+        return scheme, hostname, dirs, tailpage, querykeys
+
+    @property
+    def url(self):
+        return self._url
+
+    @property
+    def hashcode(self):
+        return self._hashcode
+
+
 class UniqRule(object):
 
-    # 用于形如abc123格式
+    # format like abc123
     alnum = re.compile(r'^(\D+)(\d+)$')
 
     date = re.compile(r'^([12]\d)?\d\d-\d{1,2}(-\d{1,2})?$')
 
     connector = '|'
 
-    # 相同后缀名
+    # same suffix
     ext = {
         '.asp':  '.asp',
         '.aspx': '.asp',
@@ -131,7 +182,7 @@ class UniqRule(object):
             return True
         return False
 
-    # 形如abc-123-453
+    # format like abc-123-453
     def is_hyphen_split(self, param):
         return not param.find('-') == -1
 
@@ -289,7 +340,7 @@ class UrlFilter(object):
 
     @staticmethod
     def isSameHost(first_url, second_url):
-        return urlparse.urlparse(first_url).netloc == urlparse.urlparse(second_url).netloc
+        return urlparse.urlparse(first_url).netloc == urlparse.urlparse(second_url).netloc  # noqa
 
     @staticmethod
     def isSameSuffixWithoutWWW(first_url, second_url):
@@ -314,7 +365,6 @@ class UrlFilter(object):
             return True
         else:
             return False
-
 
     # remove similary urls
     @staticmethod
@@ -347,7 +397,7 @@ class TestHtmlAnalyzer(unittest.TestCase):
 
     def testExtractLinks(self):
         links = []
-        for link in HtmlAnalyzer.extractLinks(self.html, self.url, self.charset):
+        for link in HtmlAnalyzer.extractLinks(self.html, self.url, self.charset):  # noqa
             links.append(link)
         self.assertGreater(len(links), 1000)
 
