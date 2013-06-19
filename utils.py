@@ -3,10 +3,10 @@
 import re
 import urllib
 import urlparse
-from pyquery import PyQuery
 import domain
 import os.path
 import unittest
+from pyquery import PyQuery
 
 
 class HtmlAnalyzer(object):
@@ -39,8 +39,8 @@ class HtmlAnalyzer(object):
             if link is None:
                 raise
 
-            # strip('\\"') for href like <a
-            # href=\"http://www.sina.com.cn\">Sina</a>
+            # strip('\\"') for href like
+            # <a href=\"http://www.sina.com.cn\">Sina</a>
             link = link.strip("/ ").strip('\\"')
 
             link = urlparse.urljoin(baseurl, link)
@@ -91,7 +91,7 @@ class HtmlAnalyzer(object):
 
 class UrlObject(object):
 
-    # 用于提取查询参数
+    # used to get query params
     query_pat = re.compile(r'(\w+)=\w+')
 
     def __init__(self, url, normalize_rule):
@@ -124,7 +124,7 @@ class UrlObject(object):
         hostname = split_result.hostname
         dirs_tailpage = split_result.path.split('/')
         dirs = []
-        if len(dirs_tailpage) >= 3:   # 存在目录
+        if len(dirs_tailpage) >= 3:   # has dir
             dirs = dirs_tailpage[1:-1]
         tailpage = dirs_tailpage[-1]
         querykeys = UrlObject.query_pat.findall(
@@ -142,14 +142,14 @@ class UrlObject(object):
 
 class UniqRule(object):
 
-    # 用于形如abc123格式
+    # format like abc123
     alnum = re.compile(r'^(\D+)(\d+)$')
 
     date = re.compile(r'^([12]\d)?\d\d-\d{1,2}(-\d{1,2})?$')
 
     connector = '|'
 
-    # 相同后缀名
+    # same suffix
     ext = {
         '.asp':  '.asp',
         '.aspx': '.asp',
@@ -182,7 +182,7 @@ class UniqRule(object):
             return True
         return False
 
-    # 形如abc-123-453
+    # format like abc-123-453
     def is_hyphen_split(self, param):
         return not param.find('-') == -1
 
