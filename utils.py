@@ -32,25 +32,29 @@ class HtmlAnalyzer(object):
                         continue
 
     @staticmethod
-    def extractLinks(html, baseurl, charset):
+    def extractLinks(html, baseurl):
 
         def _extract(url, attr):
             link = url.attrib[attr]
-            # strip('\\"') for href like <a href=\"http://www.sina.com.cn\">Sina</a>
-            link = link.strip("/ ").strip('\\"')
+
             if link is None:
                 raise
+
+            # strip('\\"') for href like <a href=\"http://www.sina.com.cn\">Sina</a>
+            link = link.strip("/ ").strip('\\"')
 
             link = urlparse.urljoin(baseurl, link)
             link = urlparse.urldefrag(link)[0]
 
             try:
+                link = link.encode('utf-8')
+            except:
+                raise
+
+            try:
                 link = urllib.quote(link, ':?=+&#/@')
             except (UnicodeDecodeError, KeyError):
-                try:
-                    link = urllib.quote(link.encode(charset), ':?=+&#/@')
-                except:
-                    pass
+                pass
 
             return link
 

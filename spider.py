@@ -184,7 +184,6 @@ class Handler(gevent.Greenlet):
         gevent.Greenlet.__init__(self)
         self.urlobj = urlobj
         self.spider = spider
-        self.charset = "utf-8"
 
     def _run(self):
         strategy = self.spider.strategy
@@ -239,14 +238,16 @@ class Handler(gevent.Greenlet):
             raise e
         if resp.status_code != requests.codes.ok:
             resp.raise_for_status()
-        charset = HtmlAnalyzer.detectCharSet(resp.text)
-        if charset is not None:
-            self.charset = charset
-            resp.encoding = charset
+        if resp.encoding is None:
+            charset = HtmlAnalyzer.detectCharSet(resp.text)
+            if charset is None:
+                resp.encoding = 'utf-8'
+            else:
+                resp.encoding = charset
         return resp.text
 
     def feed(self,html):
-        return HtmlAnalyzer.extractLinks(html,self.urlobj.url,self.charset)
+        return HtmlAnalyzer.extractLinks(html,self.urlobj.url)
 
 
     def stop(self):
