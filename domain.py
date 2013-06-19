@@ -1,20 +1,22 @@
-# -*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
+
 import unittest
 
 # From http://www.iana.org/domains/root/db
-GENERAL_TLD = ['com','edu','gov','net','org','mil','travel','aero',
-               'asia','cat','coop','int','jobs','mobi','museum','post',
-               'tel','xxx','pro','arpa']
+GENERAL_TLD = ['com', 'edu', 'gov', 'net', 'org', 'mil', 'travel', 'aero',
+               'asia', 'cat', 'coop', 'int', 'jobs', 'mobi', 'museum', 'post',
+               'tel', 'xxx', 'pro', 'arpa']
 
-REGOIN_TLD  = { "cn": ['xj', 'sh', 'ac', 'gs', 'zj', 'yn', 'ah', 'gz', 
-                       'bj', 'gx', 'jl', 'hk', 'gd', 
-                       'hn', 'hl', 'edu', 'hb', 'cq', 'ha', 'fj', 'he',
-                       'xz', 'sx', 'jx','ln', 'tw', 
-                       'mo', 'js', 'nx', 'hi', 'tj', 'sn', 'nm', 'sc', 'qh',
-                       'sd'],
-                "tw": ['idv','game','club','ebiz'],
-                "hk": ['idv'],
-                }
+REGOIN_TLD = {"cn": ['xj', 'sh', 'ac', 'gs', 'zj', 'yn', 'ah', 'gz',
+                     'bj', 'gx', 'jl', 'hk', 'gd',
+                     'hn', 'hl', 'edu', 'hb', 'cq', 'ha', 'fj', 'he',
+                     'xz', 'sx', 'jx', 'ln', 'tw',
+                     'mo', 'js', 'nx', 'hi', 'tj', 'sn', 'nm', 'sc', 'qh',
+                     'sd'],
+              "tw": ['idv', 'game', 'club', 'ebiz'],
+              "hk": ['idv'],
+              }
+
 
 def GetFirstLevelDomain(raw_host=""):
 
@@ -27,13 +29,13 @@ def GetFirstLevelDomain(raw_host=""):
             raise ValueError('Too many ":" in %s' % raw_host)
     else:
         host = raw_host
-    
+
     rev = host.split(".")[::-1]
-    
+
     if rev[0] in GENERAL_TLD:
         rev = rev[:2]
     elif len(rev[0].decode('utf-8')) == 2:
-        if rev[1] in GENERAL_TLD+REGOIN_TLD.get(rev[0], []):
+        if rev[1] in GENERAL_TLD + REGOIN_TLD.get(rev[0], []):
             rev = rev[:3]
         else:
             rev = rev[:2]
@@ -44,7 +46,7 @@ def GetFirstLevelDomain(raw_host=""):
 
 
 class DomainTest(unittest.TestCase):
-   
+
     def test_base_function(self):
         self.assertEqual(GetFirstLevelDomain('www.google.com'), 'google.com')
 
@@ -53,7 +55,7 @@ class DomainTest(unittest.TestCase):
                 '4th.www.float.int',
                 'e.pypi.python.org']
 
-        match = ['china.asia','float.int','python.org']
+        match = ['china.asia', 'float.int', 'python.org']
 
         self.assertEquals([GetFirstLevelDomain(t) for t in tlds], match)
 
@@ -62,7 +64,7 @@ class DomainTest(unittest.TestCase):
         self.assertEqual(GetFirstLevelDomain('www.gx.cn'), 'www.gx.cn')
 
     def test_cjk_domain(self):
-        
+
         self.assertEqual(GetFirstLevelDomain('www.g.中国'), 'g.中国')
 
     def test_domain_with_port(self):
