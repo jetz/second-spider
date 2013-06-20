@@ -11,10 +11,19 @@ from pyquery import PyQuery
 
 class HtmlAnalyzer(object):
 
+    # pyquery use lxml, lxml has bug when handle xml with encoding.
+    # so remove encoding='xxx' before PyQuery handle it.
+    @staticmethod
+    def _removeEncoding(xml):
+        encoding_xml = re.compile(r'^(\s*<\?xml\s+.*)encoding=.*(\?>)', re.UNICODE)  # noqa
+        if encoding_xml.match(xml):
+            xml = encoding_xml.sub(r'\1\2', xml)
+        return xml
+
     @staticmethod
     def detectCharSet(html):
 
-        pq = PyQuery(html)
+        pq = PyQuery(HtmlAnalyzer._removeEncoding(html))
 
         metas = pq('head')('meta')
 
@@ -67,7 +76,7 @@ class HtmlAnalyzer(object):
             except:
                 return False
 
-        pq = PyQuery(html)
+        pq = PyQuery(HtmlAnalyzer._removeEncoding(html))
 
         allLinks = []
 
