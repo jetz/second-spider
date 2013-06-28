@@ -8,7 +8,6 @@ from gevent import (monkey,
 
 import sys
 import logging
-import unittest
 import requests
 from threading import Timer
 from utils import HtmlAnalyzer, UrlFilter
@@ -48,7 +47,7 @@ class Strategy(object):
 class UrlObj(object):
 
     def __init__(self, url, depth=0, linkin=None):
-        if not url.startswith("http"):
+        if not url.startswith(("http", "https")):
             url = "http://" + url
         self.url = url.strip('/')
         self.depth = depth
@@ -225,7 +224,8 @@ class Handler(gevent.Greenlet):
     def open(self, url):
         strategy = self.spider.strategy
         try:
-            resp = requests.get(url, headers=strategy.headers,
+            resp = requests.get(url,
+                                headers=strategy.headers,
                                 cookies=strategy.cookies,
                                 timeout=strategy.timeout,
                                 verify=strategy.ssl_verify)
@@ -249,25 +249,11 @@ class Handler(gevent.Greenlet):
         self.kill(block=False)
 
 
-class TestSpider(unittest.TestCase):
-
-    def setUp(self):
-        self.root = "http://www.sina.com.cn"
-        strategy = Strategy(max_depth=3, max_count=5000,
-                            same_host=False, same_domain=True)
-        self.spider = Spider(strategy)
-        self.spider.setRootUrl(self.root)
-        self.spider.run()
-
-    def testSpiderStrategy(self):
-        self.assertEqual(len(self.spider.urltable), 5000)
-        self.assertLessEqual(self.spider.urltable.urls[-1].depth, 3)
-        for url in self.spider.urltable.urls[100:200]:
-            self.assert_(UrlFilter.isSameDomain(self.root, str(url)))
-
-
 if __name__ == '__main__':
     logging.basicConfig(
         level=logging.DEBUG if "-v" in sys.argv else logging.WARN,
         format='%(asctime)s %(levelname)s %(message)s')
-    unittest.main()
+    root = "http://ast.sina.cn"
+    spider = Spider()
+    spider.setRootUrl(root)
+    spider.run()

@@ -8,7 +8,6 @@ Another parallel spider, powered by gevent,requests,pyquery
 1. The concurrency foundation on [gevent](http://www.gevent.org/)
 2. The spider strategy highly configurable:
 
-> 
 * Max depth 
 * Sum totals of urls
 * Max concurrency of http request,avoid dos
@@ -45,5 +44,3 @@ Another parallel spider, powered by gevent,requests,pyquery
 Copyright © 2013 by kenshin
 
 Under MIT license : [rem.mit-license.org](http://rem.mit-license.org/)
-
-

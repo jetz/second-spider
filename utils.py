@@ -2,10 +2,8 @@
 
 import re
 import urllib
-import urlparse
 import domain
-import os.path
-import unittest
+import urlparse
 from pyquery import PyQuery
 
 
@@ -24,7 +22,6 @@ class HtmlAnalyzer(object):
     def detectCharSet(html):
 
         pq = PyQuery(HtmlAnalyzer._removeEncoding(html))
-
         metas = pq('head')('meta')
 
         for meta in metas:
@@ -71,8 +68,7 @@ class HtmlAnalyzer(object):
             try:
                 return all([UrlFilter.checkScheme(url),
                             UrlFilter.checkInvalidChar(url),
-                            UrlFilter.checkInvalidExtention(url)
-                            ])
+                            UrlFilter.checkInvalidExtention(url)])
             except:
                 return False
 
@@ -96,179 +92,6 @@ class HtmlAnalyzer(object):
             if _isValidLink(link):
                 allLinks.append(link)
         return allLinks
-
-
-class UrlObject(object):
-
-    # used to get query params
-    query_pat = re.compile(r'(\w+)=\w+')
-
-    def __init__(self, url, normalize_rule):
-        self._url = url
-        self._rule = normalize_rule
-        self._hashcode = self.__hash__()
-
-    def __str__(self):
-        return self._url
-
-    def __repr__(self):
-        return "<Url object: %s>" % self._url
-
-    def __hash__(self):
-        scheme, hostname, dirs, tailpage, querykeys = self._parse(
-            self._url)
-        norm_scheme = self._rule.normalize_scheme(scheme)
-        norm_hostname = self._rule.normalize_hostname(hostname)
-        norm_dirs = self._rule.normalize_dirs(dirs)
-        norm_tailpage = self._rule.normalize_tailpage(tailpage)
-        norm_querykeys = self._rule.normalize_querykeys(querykeys)
-        result = UniqRule.connector.join(
-            [norm_scheme, norm_hostname, norm_dirs,
-                norm_tailpage, norm_querykeys])
-        return hash(result)
-
-    def _parse(self, url):
-        split_result = urlparse.urlsplit(url)
-        scheme = split_result.scheme
-        hostname = split_result.hostname
-        dirs_tailpage = split_result.path.split('/')
-        dirs = []
-        if len(dirs_tailpage) >= 3:   # has dir
-            dirs = dirs_tailpage[1:-1]
-        tailpage = dirs_tailpage[-1]
-        querykeys = UrlObject.query_pat.findall(
-            split_result.query)
-        return scheme, hostname, dirs, tailpage, querykeys
-
-    @property
-    def url(self):
-        return self._url
-
-    @property
-    def hashcode(self):
-        return self._hashcode
-
-
-class UniqRule(object):
-
-    # format like abc123
-    alnum = re.compile(r'^(\D+)(\d+)$')
-
-    date = re.compile(r'^([12]\d)?\d\d-\d{1,2}(-\d{1,2})?$')
-
-    connector = '|'
-
-    # same suffix
-    ext = {
-        '.asp':  '.asp',
-        '.aspx': '.asp',
-        '.jsp':  '.jsp',
-        '.jspx': '.jsp',
-    }
-
-    scheme = {
-        'http':  'http',
-        'https': 'http'
-    }
-
-    normalize_dict = {
-        'digit':  '1',
-        'letter': 'a',
-        'date':   '2013-01-01',
-    }
-
-    def __init__(self, depth=None):
-        self.depth = depth
-
-    def is_digit(self, param):
-        return param.isdigit()
-
-    def is_letter(self, param):
-        return len(param) == 1 and param.isalpha()
-
-    def is_alnum(self, param):
-        if UniqRule.alnum.match(param):
-            return True
-        return False
-
-    # format like abc-123-453
-    def is_hyphen_split(self, param):
-        return not param.find('-') == -1
-
-    def is_underscore_split(self, param):
-        return not param.find('_') == -1
-
-    def is_date(self, param):
-        if UniqRule.date.match(param):
-            return True
-        return False
-
-    def split_params(self, pathnode):
-        name_params = pathnode.split(';')
-        if len(name_params) > 1:
-            return name_params[0], name_params[1:]
-        else:
-            return name_params[0], []
-
-    def normalize(self, param):
-        if self.is_digit(param):
-            return UniqRule.normalize_dict['digit']
-        elif self.is_letter(param):
-            return UniqRule.normalize_dict['letter']
-        elif self.is_date(param):
-            return UniqRule.normalize_dict['date']
-        elif self.is_alnum(param):
-            match = UniqRule.alnum.match(param)
-            return match.group(1) + UniqRule.normalize_dict['digit']
-        elif self.is_hyphen_split(param):
-            params = param.split('-')
-            for k, v in enumerate(params):
-                if v.isdigit():
-                    params[k] = UniqRule.normalize_dict['digit']
-            return '-'.join(params)
-        elif self.is_underscore_split(param):
-            params = param.split('_')
-            for k, v in enumerate(params):
-                if v.isdigit():
-                    params[k] = UniqRule.normalize_dict['digit']
-            return '_'.join(params)
-        else:
-            return param
-
-    ############################################################
-
-    def is_depth_set(self):
-        return self.depth is not None
-
-    def normalize_scheme(self, scheme):
-        return UniqRule.scheme.get(scheme, scheme)
-
-    def normalize_hostname(self, hostname):
-        return hostname
-
-    def normalize_dirs(self, dir_list):
-        dir_depth = len(dir_list)
-        if self.is_depth_set() and self.depth <= dir_depth:
-            return UniqRule.connector.join([self.normalize(dir_list[i])
-                                            for i in xrange(self.depth)])
-        return UniqRule.connector.join([self.normalize(dir_list[i])
-                                        for i in xrange(dir_depth)])
-
-    def normalize_tailpage(self, tailpage):
-        try:
-            tpname, params = self.split_params(tailpage)
-        except IndexError:
-            return tailpage
-        fname, ext = os.path.splitext(tpname)
-        norm_name = self.normalize(fname)
-        norm_ext = UniqRule.ext.get(ext, ext)
-        norm_params = sorted(params)
-        result = [norm_name, norm_ext]
-        result.extend(norm_params)
-        return UniqRule.connector.join(result)
-
-    def normalize_querykeys(self, querykeys):
-        return UniqRule.connector.join(sorted(querykeys))
 
 
 class UrlFilter(object):
@@ -320,11 +143,6 @@ class UrlFilter(object):
         'msi':  None,
     }
 
-    @staticmethod
-    def checkScheme(url):
-        scheme, netloc, path, pm, q, f = urlparse.urlparse(url)
-        return scheme in ('http', 'https')
-
     @classmethod
     def checkInvalidChar(cls, url):
         exist_invalid_char = False
@@ -339,6 +157,11 @@ class UrlFilter(object):
         dotpos = url.rfind('.') + 1
         typestr = url[dotpos:].lower()
         return (typestr not in cls.invalid_extention)
+
+    @staticmethod
+    def checkScheme(url):
+        scheme, netloc, path, pm, q, f = urlparse.urlparse(url)
+        return scheme in ('http', 'https')
 
     @staticmethod
     def isSameDomain(first_url, second_url):
@@ -374,93 +197,3 @@ class UrlFilter(object):
             return True
         else:
             return False
-
-    # remove similary urls
-    @staticmethod
-    def uniq(urls, rule=UniqRule()):
-        result = {}
-        for u in urls:
-            try:
-                urlobj = UrlObject(u, rule)
-            except Exception:
-                result[hash(u)] = u
-                continue
-            result.setdefault(urlobj.hashcode, u)
-        return result.values()
-
-
-class TestHtmlAnalyzer(unittest.TestCase):
-
-    url = "http://www.sina.com.cn"
-    charset = 'gb2312'
-
-    def setUp(self):
-        import requests
-        r = requests.get(self.url)
-        r.encoding = self.charset
-        self.html = r.text
-
-    def testDetectCharSet(self):
-        charset = HtmlAnalyzer.detectCharSet(self.html)
-        self.assertEqual(charset, self.charset)
-
-    def testExtractLinks(self):
-        links = []
-        for link in HtmlAnalyzer.extractLinks(self.html, self.url, self.charset):  # noqa
-            links.append(link)
-        self.assertGreater(len(links), 1000)
-
-
-class TestUrlFilter(unittest.TestCase):
-
-    def testCheckScheme(self):
-        url1 = "http://www.sina.com.cn"
-        url2 = "javascript:void(0)"
-        url3 = "mailto:kenshin.acs@gmail.com"
-        self.assert_(UrlFilter.checkScheme(url1))
-        self.assertFalse(UrlFilter.checkScheme(url2))
-        self.assertFalse(UrlFilter.checkScheme(url3))
-
-    def testCheckInvalidChar(self):
-        url1 = "http://www.sina.com.cn"
-        url2 = "http://www.sina.com.cn+"
-        self.assert_(UrlFilter.checkInvalidChar(url1))
-        self.assertFalse(UrlFilter.checkInvalidChar(url2))
-
-    def testCheckInvalidExtention(self):
-        url1 = "http://www.sina.com.cn"
-        url2 = "http://www.sina.com.cn/hack.pdf"
-        self.assert_(UrlFilter.checkInvalidExtention(url1))
-        self.assertFalse(UrlFilter.checkInvalidExtention(url2))
-
-    def testIsSameDomain(self):
-        url1 = "http://www.sina.com.cn"
-        url2 = "http://www.sina.com"
-        url3 = "http://news.sina.com.cn"
-        self.assertFalse(UrlFilter.isSameDomain(url1, url2))
-        self.assert_(UrlFilter.isSameDomain(url1, url3))
-
-    def testIsSameHost(self):
-        url1 = "http://www.sina.com.cn"
-        url2 = "http://news.sina.com.cn"
-        url3 = "http://www.sina.com.cn/news/"
-        self.assertFalse(UrlFilter.isSameHost(url1, url2))
-        self.assert_(UrlFilter.isSameHost(url1, url3))
-
-    def testIsSameSuffixWithoutWWW(self):
-        url1 = "http://news.sina.com.cn"
-        url2 = "http://www.news.sina.com.cn"
-        url3 = "http://www.sina.com.cn"
-        self.assert_(UrlFilter.isSameSuffixWithoutWWW(url1, url2))
-        self.assert_(UrlFilter.isSameSuffixWithoutWWW(url1, url3))
-
-    def testIsSameSuffix(self):
-        url1 = "http://news.sina.com.cn"
-        url2 = "http://www.news.sina.com.cn"
-        url3 = "http://sina.com.cn"
-        self.assertFalse(UrlFilter.isSameSuffix(url1, url2))
-        self.assert_(UrlFilter.isSameSuffix(url1, url3))
-
-
-if __name__ == '__main__':
-    unittest.main()
